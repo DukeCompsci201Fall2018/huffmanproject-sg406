@@ -31,6 +31,8 @@ public class HuffProcessor {
 	public HuffProcessor(int debug) {
 		myDebugLevel = debug;
 	}
+//	 HuffProcessor hp = new HuffProcessor(HuffProcessor.DEBUG_HIGH);
+
 
 	/**
 	 * Compresses a file. Process must be reversible and loss-less.
@@ -65,15 +67,15 @@ public class HuffProcessor {
 	}
 	private HuffNode makeTreeFromCounts(int[] counts) {
 		PriorityQueue<HuffNode>pq = new PriorityQueue<>();
-		for (int k = 0; k < ALPH_SIZE + 1; k++) {
-			if(counts[k] != 0) {
+		for (int k = 0; k < counts.length; k++) {
+			if(counts[k] > 0) {
 				pq.add(new HuffNode(k, counts[k], null, null));
 			}
 		}
 		while(pq.size() > 1) {
 			HuffNode left = pq.remove();
 			HuffNode right = pq.remove();
-			HuffNode t = new HuffNode(-1, left.myWeight + right.myWeight, left, right);
+			HuffNode t = new HuffNode(0, left.myWeight + right.myWeight, left, right);
 			pq.add(t);
 		}
 		HuffNode root = pq.remove();
@@ -87,20 +89,25 @@ public class HuffProcessor {
 	private void codingHelper(HuffNode root, String string, String [] encodings) {
 		if (root.myLeft == null && root.myRight == null) {
 			encodings[root.myValue] = string;
-			return;
 		}
+		else {
 		codingHelper(root.myLeft, string + "0", encodings);
 		codingHelper(root.myLeft, string + "1", encodings);
+		}
 	}
 	private void writeHeader(HuffNode root, BitOutputStream out) {
 		if(root.myLeft == null && root.myRight == null){
 			out.writeBits(1, 1);
 			out.writeBits(BITS_PER_WORD + 1, root.myValue);
-			return;
+			if(myDebugLevel >= DEBUG_HIGH) {
+				System.out.printf("out",out);
+			}
 		}
+		else {
 		out.writeBits(1, 0);
 		writeHeader(root.myLeft, out);
 		writeHeader(root.myRight, out);
+		}
 	}
 	
 	private HuffNode readTreeHeader(BitInputStream in) {
@@ -109,6 +116,9 @@ public class HuffProcessor {
 		if(bit == 0) {
 			HuffNode left = readTreeHeader(in);
 			HuffNode right = readTreeHeader(in);
+			if(myDebugLevel >= DEBUG_HIGH) {
+				System.out.printf("left",left.myValue);
+			}
 			return new HuffNode(0,0,left,right);
 		}
 		else {
@@ -125,6 +135,9 @@ public class HuffProcessor {
 			out.writeBits(code.length(), Integer.parseInt(code, 2));
 		}
 		String code = encodings[PSEUDO_EOF];
+		if(myDebugLevel >= DEBUG_HIGH) {
+			System.out.printf("code",code.length());
+		}
 		out.writeBits(code.length(), Integer.parseInt(code, 2));
 	}
 	private void readCompressedBits(HuffNode root, BitInputStream in, BitOutputStream out){
